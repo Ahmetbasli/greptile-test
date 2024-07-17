@@ -1,0 +1,64 @@
+env:
+  DATABASE_TYPE: postgres
+  STORE_CORS: https://medusa-stg.dzrt.com,https://frontend-stg.dzrt.com,https://editor-next.swagger.io
+  EVENTS_REDIS_URL: redis://10.92.81.3:6379/1
+  CACHE_REDIS_URL: redis://10.92.81.3:6379/2
+  WEB_BASE_URL: https://dzrt-frontend-stg.dzrt.com
+  #   WEB_BASE_URL: https://frontend-stg.dzrt.com
+  MEDUSA_BASE_URL: https://medusa-stg.dzrt.com
+
+  DRIVERRY_BASE_URL: https://api-beta-deliboy.dcafood.com
+  DRIVERRY_LOCATION_ID: medusadzrt
+
+  # PAYFORT Settings
+  PAYFORT_PAYMENT_PAGE_URL: "https://sbpaymentservices.payfort.com/FortAPI/paymentPage"
+  PAYFORT_PAYMENT_API_URL: "https://sbpaymentservices.payfort.com/FortAPI/paymentApi"
+  PAYFORT_APPLE_PAY_MERCHANT_IDENTIFIER: "merchant.com.dzrt.medusa-stg"
+  PAYFORT_APPLE_PAY_DOMAIN: "dzrt-frontend-stg.dzrt.com"
+
+  # ZOHO Settings
+  ZOHO_ACCOUNT_URL: "https://accounts.zoho.com"
+  ZOHO_API_BASE_URL: "https://www.zohoapis.com"
+  ZOHO_OWNER_USER_ID: "708488183"
+  ZOHO_CLIENT_ID: "1000.2JLXBYJK3SYE4CIMNR30HSIJUU5LAF"
+  ZOHO_DISABLED: true
+
+
+  # CMS Settings
+  CMS_API_BASE_URL: https://cms-stg.badaelcompany.com/
+
+  # Tolgee Settings
+  MEDUSA_ADMIN_TOLGEE_API_URL: https://tolgee.badaelcompany.com
+  MEDUSA_ADMIN_TOLGEE_PROJECT_ID: 2
+
+  # GCP bucket
+  GCP_CLIENT_EMAIL: "medusa-stg-sa@prj-generalutilities-2024.iam.gserviceaccount.com"
+  GCP_BUCKET_NAME: "medusa-stg-storage"
+
+  # Zepto
+  ZEPTO_BASE_URL: https://api.zeptomail.com
+
+  # Customer creation
+  USER_CREATION_VALIDATION_TOKEN_EXPIRES_IN: 3h
+  ACCESS_TOKEN_EXPIRES_IN: 30d
+
+  # otp 
+  OTP_SECRET: 123
+  OTP_STEP: 120
+  OTP_DIGITS: 6
+  OTP_EXPIRES_IN: 120
+
+  # caching
+  CACHE_TTL: 600
+
+  MEDUSA_FF_PRODUCT_CATEGORIES: true
+  
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: gce
+  hosts:
+    - host: medusa-stg.dzrt.com
+      paths:
+        - path: /*
+          pathType: ImplementationSpecific

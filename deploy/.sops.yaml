@@ -1,0 +1,8 @@
+---
+creation_rules:
+  - path_regex: ".*/helm_vars/dev/.*"
+    gcp_kms: projects/prj-generalutilities-2024/locations/europe/keyRings/ecom-dev-sops/cryptoKeys/app
+  - path_regex: ".*/helm_vars/stg/.*"
+    gcp_kms: projects/prj-generalutilities-2024/locations/europe/keyRings/ecom-stg-sops/cryptoKeys/app
+  - path_regex: ".*/helm_vars/prod/.*"
+    gcp_kms: projects/prj-generalutilities-2024/locations/europe/keyRings/ecom-prod-sops/cryptoKeys/app
