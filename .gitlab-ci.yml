@@ -1,97 +1,75 @@
 stages:
+  # - lint
   - build
   - deploy-dev
-  - deploy-stg
-  - deploy-prod
 
+
+# lint:
+#   stage: lint
+#   tags:
+#     - ahmet-test-runner
+#   image: node:22.2.0
+#   script:
+#     - npm install
+#     - npm run lint
 variables:
-  PROJECT_ID: prj-ecommerce-2024
-  DOCKER_REGISTRY: me-central2-docker.pkg.dev
-  IMAGE_NAME: docker/$CI_PROJECT_NAME
-  IMAGE_TAG: ${CI_COMMIT_SHORT_SHA}-${CI_COMMIT_BRANCH}
-  REGION: me-central2
+  DOCKER_REGISTRY: registry-1.docker.io
+  DOCKER_HUB_EMAIL: ahmet.basli@leanscale.com
+  DOCKER_HUB_USERNAME: ahmetbaslileanscale
+  IMAGE_NAME: $DOCKER_HUB_USERNAME/ahmet-test
+
 
 .deploy: &deploy
   image:
-    name: kiwigrid/gcloud-kubectl-helm:3.11.1-421.0.0-1
+    name: dtzar/helm-kubectl
     entrypoint: [""]
   script:
-    - echo $GCLOUD_SERVICE_KEY | base64 -d > /tmp/gcp_sa_key.json
-    - gcloud auth activate-service-account --key-file=/tmp/gcp_sa_key.json
-    - gcloud config set project $PROJECT_ID
-    - gcloud auth configure-docker
-    - gcloud container clusters get-credentials ${PROJECT_ID}-${CLUSTER_SUFFIX} --region $REGION --project $PROJECT_ID
-    - cd deploy/$CI_PROJECT_NAME
+    - eval $(minikube docker-env)
+    - cd deploy/medusa
     - >
-      helm secrets upgrade --install ${CI_PROJECT_NAME}-${DEPLOY_ENV} . 
-      -f values.yaml 
-      -f helm_vars/${DEPLOY_ENV}/values.yaml 
-      -f helm_vars/${DEPLOY_ENV}/secrets.yaml  
-      -n ${CI_PROJECT_NAME}-${DEPLOY_ENV} 
-      --set image.tag=${IMAGE_TAG} 
-      --atomic 
-      --timeout 300s
+      helm upgrade
+      --install
+      --namespace medusa
       --create-namespace
+      --set image.repository=$DOCKER_REGISTRY/$IMAGE_NAME
+      --set image.tag=$CI_COMMIT_SHA
+      --set image.pullPolicy=Always
+
+
 
 build:
   stage: build
-  image: gcr.io/google.com/cloudsdktool/google-cloud-cli:latest
+  image: docker:latest
   services:
     - docker:dind
+  before_script:
+    - export SANITIZED_COMMIT_BRANCH=$(echo "$CI_COMMIT_BRANCH" | tr '/' '-')
+    - export IMAGE_TAG=${CI_COMMIT_SHORT_SHA}-$(echo "$CI_COMMIT_BRANCH" | tr '/' '-')
+    - echo -n "$DOCKER_HUB_ACCESS_TOKEN" | docker login $DOCKER_REGISTRY -u $DOCKER_HUB_EMAIL --password-stdin
+    - echo "$SANITIZED_COMMIT_BRANCH"
+    - echo "$CI_COMMIT_BRANCH"
   script:
-    - docker pull $DOCKER_REGISTRY/$PROJECT_ID/$IMAGE_NAME:latest-${CI_COMMIT_BRANCH} || true
-    - docker build -t $IMAGE_NAME . --cache-from $DOCKER_REGISTRY/$PROJECT_ID/$IMAGE_NAME:latest-${CI_COMMIT_BRANCH}
-    - docker tag $IMAGE_NAME $DOCKER_REGISTRY/$PROJECT_ID/$IMAGE_NAME:$IMAGE_TAG
-    - docker tag $IMAGE_NAME $DOCKER_REGISTRY/$PROJECT_ID/$IMAGE_NAME:latest-${CI_COMMIT_BRANCH}
-    - echo $GCLOUD_SERVICE_KEY | base64 -d > /tmp/gcloud-service-key.json
-    - gcloud auth activate-service-account --key-file=/tmp/gcloud-service-key.json
-    - gcloud auth configure-docker $DOCKER_REGISTRY
-    - docker push $DOCKER_REGISTRY/$PROJECT_ID/$IMAGE_NAME:$IMAGE_TAG
-    - docker push $DOCKER_REGISTRY/$PROJECT_ID/$IMAGE_NAME:latest-${CI_COMMIT_BRANCH}
+    - docker pull $DOCKER_REGISTRY/$IMAGE_NAME:latest-${SANITIZED_COMMIT_BRANCH} || true
+    - docker build -t $IMAGE_NAME . --cache-from $DOCKER_REGISTRY/$IMAGE_NAME:latest-${SANITIZED_COMMIT_BRANCH}
+    - docker tag $IMAGE_NAME $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
+    - docker tag $IMAGE_NAME $DOCKER_REGISTRY/$IMAGE_NAME:latest-$SANITIZED_COMMIT_BRANCH
+    - docker push $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
+    - docker push $DOCKER_REGISTRY/$IMAGE_NAME:latest-$SANITIZED_COMMIT_BRANCH
+
+
 
 deploy-dev:
   <<: *deploy
   stage: deploy-dev
+  variables:
+    DEPLOY_ENV: dev
   environment:
     name: dev
     url: https://${CI_PROJECT_NAME}-${DEPLOY_ENV}.dzrt.com
   variables:
     DEPLOY_ENV: dev
-    CLUSTER_SUFFIX: dev
   needs:
     - build
   only:
     refs:
       - development
-
-deploy-stg:
-  <<: *deploy
-  stage: deploy-stg
-  environment:
-    name: stg
-    url: https://${CI_PROJECT_NAME}-${DEPLOY_ENV}.dzrt.com
-  variables:
-    DEPLOY_ENV: stg
-    CLUSTER_SUFFIX: dev
-  needs:
-    - build
-  only:
-    refs:
-      - staging
-  when: manual
-
-deploy-prod:
-  <<: *deploy
-  stage: deploy-prod
-  environment:
-    name: prod
-    url: https://dzrt.com
-  variables:
-    DEPLOY_ENV: prod
-    CLUSTER_SUFFIX: prod
-  needs:
-    - build
-  only:
-    refs:
-      - main
-  when: manual
